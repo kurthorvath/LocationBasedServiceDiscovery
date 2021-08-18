@@ -85,7 +85,13 @@ input:checked + .slider:before {
   border-radius: 50%;
 }
 
+
 </style>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==" crossorigin=""></script>
+
+
 </head>
 <body>
 
@@ -93,15 +99,21 @@ input:checked + .slider:before {
 <p><br></p>
 <img src="https://5gplayground.at/wp-content/uploads/2019/08/5g-playground-logo.png" alt="Playground" width="256" height="115"><br>
 
-//<label class="switch">
+
+<label class="switch">
   <input type="checkbox" value="activate Geofence" onchange="activateGeofence()">
-  //<span class="slider"></span>
-//</label>
+ <span class="slider"></span>
+</label>
+
 <button onclick="getLocation()" class="button button1">Try It</button> <br>
 <button onclick="forwardtoURL()" class="button button1">Forward to target!</button> <br>
 <button onclick="forwardtoURLs1()" class="button button2">Forward Stage 1 (less detail)</button><br>
 <button onclick="forwardtoURLs2()" class="button button2">Forward Stage 2 (more detail)</button><br>
+<div id="mapid" style="width: 400px; height: 400px;"></div>
 <p id="demo"></p>
+
+
+
 
 
 
@@ -122,6 +134,41 @@ var targetURL = 'http://speedtest.service.consul:3000';
 var targetURLs1 =''
 var targetURLs2 =''
 var geofenceActive = false;
+
+
+	var mymap = L.map('mapid').setView([46.6141082, 14.2781975], 13);
+
+	L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+		maxZoom: 18,
+		attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
+			'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+		id: 'mapbox/streets-v11',
+		tileSize: 512,
+		zoomOffset: -1
+	}).addTo(mymap);
+
+var lakesidepark = 'https://raw.githubusercontent.com/kurthorvath/LocationBasedServiceDiscovery/master/geojson/lakeside.json'
+var klagenfurt = 'https://raw.githubusercontent.com/kurthorvath/LocationBasedServiceDiscovery/master/geojson/klagenfurt.json'
+var guinea = 'https://raw.githubusercontent.com/johan/world.geo.json/master/countries/GIN.geo.json'
+
+// create a leaflet map (you must have loaded leaflet first)
+
+
+fetch(
+  klagenfurt
+).then(
+  res => res.json()
+).then(
+  data => L.geoJSON(data).addTo(mymap)
+)
+
+fetch(
+  lakesidepark
+).then(
+  res => res.json()
+).then(
+  data => L.geoJSON(data).addTo(mymap)
+)
 
 
 function getLocation() {
@@ -158,16 +205,27 @@ function showPosition(position) {
   x.innerHTML = "Latitude: " + position.coords.latitude + 
   "<br>Longitude: " + position.coords.longitude;
 
+  var marker = L.marker([lat, lon]).addTo(mymap);
+
+
+
+
+
 if (geofenceActive){
 
   var strCC = "";
-    strCC='http://geo.speedtest.service.consul:8080/fence/lakeside/search?lat='+lat+'&lon='+lon 
+
+    strCC='http://geo.speedtest.service.consul:8080/fence/lakeside/search?lat='+lat+'&lon='+lon
     console.log(strCC)
     res = httpGet(strCC)
+    const obj_1 = JSON.parse(res);
 
-    const obj = JSON.parse(res);
+    strCC='http://geo.speedtest.service.consul:8080/fence/klagenfurt/search?lat='+lat+'&lon='+lon
+    console.log(strCC)
+    res = httpGet(strCC)
+    const obj_2 = JSON.parse(res);
 
-   //readGoogleJson(obj);
+    readGeoJson(obj_1, obj_2);
 
 
 }else{
@@ -177,9 +235,33 @@ if (geofenceActive){
 
     const obj = JSON.parse(res);
 
-   readGoogleJson(obj);
+    readGoogleJson(obj);
+
 }
 }
+
+function readGeoJson(obj_1,obj_2)
+{
+
+if (obj_1.fences.length > 0){
+console.log(obj_1.fences.length)
+console.log(obj_1.fences[0].name)
+postcode = obj_1.fences[0].name.toLowerCase();
+}
+
+if (obj_2.fences.length > 0){
+console.log(obj_2.fences.length)
+console.log(obj_2.fences[0].name)
+state = obj_2.fences[0].name.toLowerCase();
+}
+
+
+document.getElementById("demo").innerHTML += "<br>" + state + "<br>" + postcode + "<br>" + city + "<br> BaseURL: "+currURL
+
+resolveDNS();
+console.log("done resolveDNS")
+}
+
 
 function readGoogleJson(obj)
 {
@@ -207,9 +289,11 @@ function resolveDNS(){
 
     var strCC = "";
     //todo refactor me!
+
 	state = state.replace(/ü/g, 'ue')
 	state = state.replace(/ö/g, 'oe') 
 	state = state.replace(/ä/g, 'ae') 
+
 
     // stage2   -> 9020.kaernten.XYZ.at
     strCC=currURL.replace("//","//"+postcode+"."+state+".") 

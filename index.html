@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="jquery-3.6.0.min.js"></script>
+<script src=" dns.js"></script>
+
+
+<style>
+.button {
+  border: none;
+  color: white;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  margin: 4px 2px;
+  cursor: pointer;
+}
+
+.button1 {background-color: #4CAF50;} /* Green */
+.button2 {background-color: #008CBA;} /* Blue */
+
+
+/* The switch - the box around the slider */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+
+/* Hide default HTML checkbox */
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* The slider */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #2196F3;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(26px);
+  -ms-transform: translateX(26px);
+  transform: translateX(26px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+</style>
+</head>
+<body>
+
+<p>Click the button to start DNS lookup</p>
+<p><br></p>
+<img src="https://5gplayground.at/wp-content/uploads/2019/08/5g-playground-logo.png" alt="Playground" width="256" height="115"><br>
+
+//<label class="switch">
+  <input type="checkbox" value="activate Geofence" onchange="activateGeofence()">
+  //<span class="slider"></span>
+//</label>
+<button onclick="getLocation()" class="button button1">Try It</button> <br>
+<button onclick="forwardtoURL()" class="button button1">Forward to target!</button> <br>
+<button onclick="forwardtoURLs1()" class="button button2">Forward Stage 1 (less detail)</button><br>
+<button onclick="forwardtoURLs2()" class="button button2">Forward Stage 2 (more detail)</button><br>
+<p id="demo"></p>
+
+
+
+
+<script>
+
+
+var consoleStorage = [];
+
+var x = document.getElementById("demo");
+var lat = 0
+var lon = 0
+var city = "";
+var state = "";
+var postcode = "";
+var currURL = window.location.href;
+var targetURL = 'http://speedtest.service.consul:3000';
+var targetURLs1 =''
+var targetURLs2 =''
+var geofenceActive = false;
+
+
+function getLocation() {
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(showPosition);
+
+  } else { 
+    x.innerHTML = "Geolocation is not supported by this browser.";
+  }
+}
+
+function showGeofence(position) {
+  lat = position.coords.latitude
+  lon = position.coords.longitude
+  x.innerHTML = "Latitude: " + position.coords.latitude + 
+  "<br>Longitude: " + position.coords.longitude;
+
+  var strCC = "";
+    strCC='https://maps.googleapis.com/maps/api/geocode/json?latlng='+lat+","+lon+'&key=AIzaSyAsgkUAHzWc1cUZQpyKV1Y8_BdqPm-p8pI' 
+    res = httpGet(strCC)
+
+    const obj = JSON.parse(res);
+
+   readGoogleJson(obj);
+
+}
+
+
+
+function showPosition(position) {
+  lat = position.coords.latitude
+  lon = position.coords.longitude
+  x.innerHTML = "Latitude: " + position.coords.latitude + 
+  "<br>Longitude: " + position.coords.longitude;
+
+if (geofenceActive){
+
+  var strCC = "";
+    strCC='http://geo.speedtest.service.consul:8080/fence/lakeside/search?lat='+lat+'&lon='+lon 
+    console.log(strCC)
+    res = httpGet(strCC)
+
+    const obj = JSON.parse(res);
+
+   //readGoogleJson(obj);
+
+
+}else{
+  var strCC = "";
+    strCC='https://maps.googleapis.com/maps/api/geocode/json?latlng='+lat+","+lon+'&key=AIzaSyAsgkUAHzWc1cUZQpyKV1Y8_BdqPm-p8pI' 
+    res = httpGet(strCC)
+
+    const obj = JSON.parse(res);
+
+   readGoogleJson(obj);
+}
+}
+
+function readGoogleJson(obj)
+{
+
+for (var item of obj.results[0].address_components) 
+{
+   if(item.types[0] == "locality")
+        city = item.long_name
+
+    if(item.types[0] == "administrative_area_level_1")
+        state = item.long_name
+
+    if(item.types[0] == "postal_code")
+    postcode = item.long_name
+}
+
+document.getElementById("demo").innerHTML += "<br>" + state + "<br>" + postcode + "<br>" + city + "<br> BaseURL: "+currURL
+
+resolveDNS();
+console.log("done resolveDNS")
+}
+
+
+function resolveDNS(){
+
+    var strCC = "";
+    //todo refactor me!
+	state = state.replace(/ü/g, 'ue')
+	state = state.replace(/ö/g, 'oe') 
+	state = state.replace(/ä/g, 'ae') 
+
+    // stage2   -> 9020.kaernten.XYZ.at
+    strCC=currURL.replace("//","//"+postcode+"."+state+".") 
+    strCC=strCC.replace("js.","") 
+    strCC=strCC.replace("consul","consul:3000")
+
+    var stage2 = testDomain(strCC) //targetURL
+    document.getElementById("demo").innerHTML += '<br> <b> Validate Stage 2 </b> <br>' + strCC + " Active: " +stage2;
+    targetURLs2 = strCC
+    if(stage2 == true){
+        targetURL = strCC;
+       // return;
+    }
+
+
+    // stage1   -> kaernten.XYZ.at
+    strCC=currURL.replace("//","//"+state+".")
+    strCC=strCC.replace("js.","")
+    strCC=strCC.replace("consul","consul:3000")
+ 
+    var stage1 = testDomain(strCC)
+if(stage2 != true){
+    targetURL=strCC
+    document.getElementById("demo").innerHTML += '<br> <b> Validate Stage 1 </b> <br>' + strCC + " Active: " +stage1;
+}
+    targetURLs1=strCC
+    if(stage1 == true && stage2 != true){
+        targetURL = strCC;
+        return;
+    }
+
+	
+    
+}
+
+function activateGeofence(){
+    console.log("activate Geofence")
+    geofenceActive = true;
+}
+
+
+function forwardtoURLs1(){
+    window.open(targetURLs1, '_blank').focus();
+}
+
+function forwardtoURLs2(){
+    window.open(targetURLs2, '_blank').focus();
+}
+
+
+function forwardtoURL(){
+    window.open(targetURL, '_blank').focus();
+}
+
+function realDNS(myURL){
+
+console.log("RealDNS");
+// (B1) GET FORM DATA
+var RES = false;
+myURL=myURL.replace("http://","")
+myURL=myURL.replace(":3000/","")
+  var data = new FormData();
+  data.append('URL', myURL);
+  // (B2) AJAX CALL
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', "0-dummy.php", false);
+  xhr.onload = function () {
+  //document.getElementById("demo").innerHTML += this.response;
+  console.log(this.response + "---" + !this.response.includes("consul") );
+  RES = !this.response.includes("consul");
+	return !this.response.includes("consul");
+
+  };
+  xhr.send(data);
+console.log("done REAL!"+RES)
+  return RES;
+
+}
+
+function getWhatever(myURL) {
+  var strReturn = "";
+
+  jQuery.ajax({
+    url: myURL,
+    success: function(html) {
+      strReturn = html;
+    },
+    error: function(xhr, status, error) {
+          // var err = eval("(" + xhr.responseText + ")");
+           console.log(status); } ,  
+    async:false,
+    dataType: 'jsonp',
+    "headers": {
+       "accept": "application/json",
+       "Access-Control-Allow-Origin":"*"
+      },
+    crossDomain:false
+  });
+
+  return strReturn;
+}
+
+function fetchOHLC(yUrl) {
+    return fetch(yUrl, {
+        method: 'GET', // The method
+        mode: 'no-cors', // It can be no-cors, cors, same-origin
+        credentials: 'same-origin', // It can be include, same-origin, omit
+        headers: {
+            'Content-Type': 'application/json', // Your headers
+        },
+    }).then(returnedData => {
+        return true;
+        console.log("got DATA!!!");
+    }).catch(err => {
+        return false;
+        console.log("ERROR  DATA!!!" + err);
+    })
+
+}
+
+
+function testDomain(INdomain) {
+    console.log("before open");
+    console.log(INdomain);
+
+    var RET = false
+    try {
+
+	var t0 = performance.now()    
+        RET = realDNS(INdomain);
+	var t1 = performance.now()
+	console.log("Call DNS LOOKUP took " + (t1 - t0) + " milliseconds.")
+
+	console.log("RET: "+RET);
+    } catch (error) {
+        console.log("Actual Error:" + error);
+        return false;
+    }
+
+
+    return RET;
+
+}
+
+
+function httpGet(theUrl)
+{
+    x.innerHTML += "<br>"+theUrl
+    var xmlHttp = new XMLHttpRequest();
+    xmlHttp.open( "GET", theUrl, false ); // false for synchronous request
+    xmlHttp.send( null );
+    return xmlHttp.responseText;
+}
+
+
+
+</script>
+
+</body>
+</html>

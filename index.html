@@ -141,7 +141,7 @@ function showGeofence(position) {
   "<br>Longitude: " + position.coords.longitude;
 
   var strCC = "";
-    strCC='https://maps.googleapis.com/maps/api/geocode/json?latlng='+lat+","+lon+'&key=AIzaSyAsgkUAHzWc1cUZQpyKV1Y8_BdqPm-p8pI' 
+    strCC='https://maps.googleapis.com/maps/api/geocode/json?latlng='+lat+","+lon+'&key=KEY' 
     res = httpGet(strCC)
 
     const obj = JSON.parse(res);
@@ -207,9 +207,9 @@ function resolveDNS(){
 
     var strCC = "";
     //todo refactor me!
-	state = state.replace(/ü/g, 'ue')
-	state = state.replace(/ö/g, 'oe') 
-	state = state.replace(/ä/g, 'ae') 
+	state = state.replace(/Ã¼/g, 'ue')
+	state = state.replace(/Ã¶/g, 'oe') 
+	state = state.replace(/Ã¤/g, 'ae') 
 
     // stage2   -> 9020.kaernten.XYZ.at
     strCC=currURL.replace("//","//"+postcode+"."+state+".") 

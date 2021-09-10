@@ -104,14 +104,18 @@ input:checked + .slider:before {
   <input type="checkbox" value="activate Geofence" onchange="activateGeofence()">
  <span class="slider"></span>
 </label>
+<label class="switch">
+  <input type="checkbox" value="activate Debug" onchange="activateDebug()">
+ <span class="slider"></span>
+</label>
+
 
 <button onclick="getLocation()" class="button button1">Try It</button> <br>
 <button onclick="forwardtoURL()" class="button button1">Forward to target!</button> <br>
 <button onclick="forwardtoURLs1()" class="button button2">Forward Stage 1 (less detail)</button><br>
 <button onclick="forwardtoURLs2()" class="button button2">Forward Stage 2 (more detail)</button><br>
-<div id="mapid" style="width: 400px; height: 400px;"></div>
+<div id="mapid" style="width: 600px; height: 600px;"></div>
 <p id="demo"></p>
-
 
 
 
@@ -134,26 +138,50 @@ var targetURL = 'http://speedtest.service.consul:3000';
 var targetURLs1 =''
 var targetURLs2 =''
 var geofenceActive = false;
+var debugActive = false;
 
-
-	var mymap = L.map('mapid').setView([46.6141082, 14.2781975], 13);
+	var mymap = L.map('mapid').setView([46.6141082, 14.2781975], 11);
 
 	L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
 		maxZoom: 18,
 		attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
-			'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+			'Imagery Â© <a href="https://www.mapbox.com/">Mapbox</a>',
 		id: 'mapbox/streets-v11',
 		tileSize: 512,
 		zoomOffset: -1
 	}).addTo(mymap);
 
+ mymap.on("click", function(e){
+        var mp = new L.Marker([e.latlng.lat, e.latlng.lng]).addTo(mymap);
+        lat = e.latlng.lat
+	lon = e.latlng.lng
+ });
 var lakesidepark = 'https://raw.githubusercontent.com/kurthorvath/LocationBasedServiceDiscovery/master/geojson/lakeside.json'
 var klagenfurt = 'https://raw.githubusercontent.com/kurthorvath/LocationBasedServiceDiscovery/master/geojson/klagenfurt.json'
+
+var k9020 = 'https://raw.githubusercontent.com/kurthorvath/LocationBasedServiceDiscovery/master/geojson/9020.geojson'
+var k9073 = 'https://raw.githubusercontent.com/kurthorvath/LocationBasedServiceDiscovery/master/geojson/9073.geojson'
+
 var guinea = 'https://raw.githubusercontent.com/johan/world.geo.json/master/countries/GIN.geo.json'
+
+var b08 = 'https://raw.githubusercontent.com/kurthorvath/gofence/master/gofence/b08.json'
+var b08b = 'https://raw.githubusercontent.com/kurthorvath/gofence/master/gofence/b08_balkon.json'
+var b10 = 'https://raw.githubusercontent.com/kurthorvath/gofence/master/gofence/b10.json'
 
 // create a leaflet map (you must have loaded leaflet first)
 
 
+function polystyle(feature) {
+    return {
+        //fillColor: 'blue',
+        weight: 2,
+        opacity: 1,
+        color: 'red',  //Outline color
+        fillOpacity: 0.7
+    };
+}
+
+/*
 fetch(
   klagenfurt
 ).then(
@@ -169,6 +197,47 @@ fetch(
 ).then(
   data => L.geoJSON(data).addTo(mymap)
 )
+*/
+fetch(
+  b08
+).then(
+  res => res.json()
+).then(
+  data => L.geoJSON(data, {style: polystyle}).addTo(mymap)
+)
+
+fetch(
+  b08b
+).then(
+  res => res.json()
+).then(
+  data => L.geoJSON(data).addTo(mymap)
+)
+
+fetch(
+  b10
+).then(
+  res => res.json()
+).then(
+  data => L.geoJSON(data).addTo(mymap)
+)
+
+fetch(
+  k9020
+).then(
+  res => res.json()
+).then(
+  data => L.geoJSON(data).addTo(mymap)
+)
+
+fetch(
+  k9073
+).then(
+  res => res.json()
+).then(
+  data => L.geoJSON(data).addTo(mymap)
+)
+
 
 
 function getLocation() {
@@ -182,13 +251,15 @@ function getLocation() {
 }
 
 function showGeofence(position) {
+if (lat == 0 && lon == 0){
   lat = position.coords.latitude
   lon = position.coords.longitude
-  x.innerHTML = "Latitude: " + position.coords.latitude + 
-  "<br>Longitude: " + position.coords.longitude;
+} 
+ x.innerHTML = "Latitude: " + lat + 
+  "<br>Longitude: " + lon;
 
   var strCC = "";
-    strCC='https://maps.googleapis.com/maps/api/geocode/json?latlng='+lat+","+lon+'&key=KEY' 
+    strCC='https://maps.googleapis.com/maps/api/geocode/json?latlng='+lat+","+lon+'&key=AIzaSyAsgkUAHzWc1cUZQpyKV1Y8_BdqPm-p8pI' 
     res = httpGet(strCC)
 
     const obj = JSON.parse(res);
@@ -199,13 +270,24 @@ function showGeofence(position) {
 
 
 
-function showPosition(position) {
+async function showPosition(position) {
+
+//while (true) {
+
+	var t0 = performance.now();    
+        //RET = realDNS(INdomain);
+if (lat == 0 && lon == 0){
   lat = position.coords.latitude
   lon = position.coords.longitude
-  x.innerHTML = "Latitude: " + position.coords.latitude + 
-  "<br>Longitude: " + position.coords.longitude;
-
   var marker = L.marker([lat, lon]).addTo(mymap);
+} 
+ x.innerHTML = "Latitude: " + lat + 
+  "<br>Longitude: " + lon;
+
+	var t1 = performance.now()
+	console.log("Call GATHER GPS " + (t1 - t0) + " milliseconds.")
+
+
 
 
 
@@ -214,15 +296,20 @@ function showPosition(position) {
 if (geofenceActive){
 
   var strCC = "";
+  var data =""
+    strCC='https://ihewykfbla.execute-api.eu-central-1.amazonaws.com/default/geofence'
+     console.log(strCC)
+    res = httpPost(strCC,lat,lon,"lakeside")
 
-    strCC='http://geo.speedtest.service.consul:8080/fence/lakeside/search?lat='+lat+'&lon='+lon
-    console.log(strCC)
-    res = httpGet(strCC)
+     
+res=res.replace("\\","")
+   console.log(res)
+
+
     const obj_1 = JSON.parse(res);
-
-    strCC='http://geo.speedtest.service.consul:8080/fence/klagenfurt/search?lat='+lat+'&lon='+lon
     console.log(strCC)
-    res = httpGet(strCC)
+    res = httpPost(strCC,lat,lon,"klagenfurt")
+ console.log(res) 
     const obj_2 = JSON.parse(res);
 
     readGeoJson(obj_1, obj_2);
@@ -231,13 +318,23 @@ if (geofenceActive){
 }else{
   var strCC = "";
     strCC='https://maps.googleapis.com/maps/api/geocode/json?latlng='+lat+","+lon+'&key=AIzaSyAsgkUAHzWc1cUZQpyKV1Y8_BdqPm-p8pI' 
-    res = httpGet(strCC)
+  
+var t0 = performance.now() 
+  res = httpGet(strCC) 
+var t1 = performance.now()
+console.log("Call AWS API " + (t1 - t0) + " milliseconds.")
 
-    const obj = JSON.parse(res);
+   const obj = JSON.parse(res);
 
     readGoogleJson(obj);
 
 }
+
+var t1end = performance.now()
+console.log("Call TOTAL " + (t1end - t0) + " milliseconds.")
+
+//await new Promise(resolve => setTimeout(resolve, 5000));
+//}
 }
 
 function readGeoJson(obj_1,obj_2)
@@ -257,8 +354,11 @@ state = obj_2.fences[0].name.toLowerCase();
 
 
 document.getElementById("demo").innerHTML += "<br>" + state + "<br>" + postcode + "<br>" + city + "<br> BaseURL: "+currURL
-
+var t0 = performance.now()
 resolveDNS();
+var t1 = performance.now()
+console.log("Call RESOLVE DNS() " + (t1 - t0) + " milliseconds.")
+
 console.log("done resolveDNS")
 }
 
@@ -294,7 +394,7 @@ function resolveDNS(){
 	state = state.replace(/ö/g, 'oe') 
 	state = state.replace(/ä/g, 'ae') 
 
-
+    if(postcode != ""){
     // stage2   -> 9020.kaernten.XYZ.at
     strCC=currURL.replace("//","//"+postcode+"."+state+".") 
     strCC=strCC.replace("js.","") 
@@ -305,26 +405,32 @@ function resolveDNS(){
     targetURLs2 = strCC
     if(stage2 == true){
         targetURL = strCC;
-       // return;
+        return;
+    }
+    }else{
+	document.getElementById("demo").innerHTML += '<br> <b> Validate Stage 2 </b> <br> SKIPPED' ;
     }
 
 
+    if(state != ""){
     // stage1   -> kaernten.XYZ.at
     strCC=currURL.replace("//","//"+state+".")
     strCC=strCC.replace("js.","")
     strCC=strCC.replace("consul","consul:3000")
  
     var stage1 = testDomain(strCC)
-if(stage2 != true){
-    targetURL=strCC
-    document.getElementById("demo").innerHTML += '<br> <b> Validate Stage 1 </b> <br>' + strCC + " Active: " +stage1;
-}
+    if(stage2 != true){
+       targetURL=strCC
+       document.getElementById("demo").innerHTML += '<br> <b> Validate Stage 1 </b> <br>' + strCC + " Active: " +stage1;
+    }
     targetURLs1=strCC
     if(stage1 == true && stage2 != true){
         targetURL = strCC;
         return;
     }
-
+    }else{
+	document.getElementById("demo").innerHTML += '<br> <b> Validate Stage 1 </b> <br> SKIPPED' ;
+    }
 	
     
 }
@@ -332,6 +438,11 @@ if(stage2 != true){
 function activateGeofence(){
     console.log("activate Geofence")
     geofenceActive = true;
+}
+
+function activateDebug(){
+    console.log("activate Debug")
+    debugActive = true;
 }
 
 
@@ -445,6 +556,25 @@ function httpGet(theUrl)
     var xmlHttp = new XMLHttpRequest();
     xmlHttp.open( "GET", theUrl, false ); // false for synchronous request
     xmlHttp.send( null );
+    return xmlHttp.responseText;
+}
+
+function httpPost(theUrl, mylat,mylon,feat)
+{
+
+const json = {
+"lat": mylat,
+"lon": mylon,
+"feat": feat
+};
+console.log(JSON.stringify(json))
+    x.innerHTML += "<br>"+theUrl
+    var xmlHttp = new XMLHttpRequest();
+    xmlHttp.open( 'POST', theUrl, false ); // false for synchronous request
+    xmlHttp.setRequestHeader('Content-Type', 'application/json');
+    xmlHttp.send(JSON.stringify(json));
+
+
     return xmlHttp.responseText;
 }
 
